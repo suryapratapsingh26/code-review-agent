@@ -9,3 +9,10 @@ class Finding(BaseModel):
     category: Literal["security", "bug", "maintainability"]
     message: str
     suggestion: str | None = None
+
+
+class ReviewResult(BaseModel):
+    findings: list[Finding] = Field(
+        default_factory=list,
+        description="Problems found in the diff. Empty list if there are none.",
+    )
