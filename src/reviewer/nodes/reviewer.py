@@ -4,7 +4,7 @@ from ..config import GROQ_API_KEY
 from ..diff import annotate_patch
 from ..models import Finding, ReviewResult
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 MAX_DIFF_CHARS = 12000
 
 SYSTEM_PROMPT = """You are a careful senior engineer reviewing a pull request.
