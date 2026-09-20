@@ -3,6 +3,7 @@ from langchain_groq import ChatGroq
 from ..config import GROQ_API_KEY
 from ..diff import annotate_patch
 from ..models import Finding, ReviewResult
+from ..state import ReviewState
 
 MODEL = "openai/gpt-oss-120b"
 MAX_DIFF_CHARS = 12000
@@ -43,3 +44,7 @@ def review_files(diff_files: list[dict]) -> list[Finding]:
     reviewer = llm.with_structured_output(ReviewResult)
     result = reviewer.invoke([("system", SYSTEM_PROMPT), ("human", prompt)])
     return result.findings
+
+
+def review_node(state: ReviewState) -> dict:
+    return {"findings": review_files(state["diff_files"])}
