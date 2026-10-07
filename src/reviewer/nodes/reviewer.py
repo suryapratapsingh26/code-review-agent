@@ -3,23 +3,11 @@ from langchain_groq import ChatGroq
 from ..config import GROQ_API_KEY
 from ..diff import annotate_patch
 from ..models import Finding, ReviewResult
+from ..prompts import SECURITY_PROMPT, BUG_PROMPT, MAINTAINABILITY_PROMPT
 from ..state import ReviewState
 
 MODEL = "openai/gpt-oss-120b"
 MAX_DIFF_CHARS = 12000
-
-SYSTEM_PROMPT = """You are a careful senior engineer reviewing a pull request.
-
-You are given the diff of each changed file. Every line has its line number in the NEW file.
-
-Rules:
-- Only report real problems in the added lines (lines starting with +).
-- Use the exact file path and the line number shown next to the problem.
-- Categories: security, bug, maintainability.
-- Severity: high = will break or is exploitable, medium = likely problem, low = minor.
-- Do not comment on style or formatting. Do not invent problems.
-- If the diff looks fine, return an empty list.
-"""
 
 
 def build_prompt(diff_files: list[dict]) -> str:
@@ -35,16 +23,25 @@ def build_prompt(diff_files: list[dict]) -> str:
         total += len(block)
     return "\n".join(parts)
 
-
-def review_files(diff_files: list[dict]) -> list[Finding]:
-    prompt = build_prompt(diff_files)
-    if not prompt:
+def review_files(diff_files: list[dict], system_prompt: str, category: str) -> list[Finding]:
+    diff_text = build_prompt(diff_files)
+    if not diff_text:
         return []
     llm = ChatGroq(model=MODEL, api_key=GROQ_API_KEY, temperature=0)
     reviewer = llm.with_structured_output(ReviewResult)
-    result = reviewer.invoke([("system", SYSTEM_PROMPT), ("human", prompt)])
+    result = reviewer.invoke([("system", system_prompt), ("human", diff_text)])
+    for f in result.findings:
+        f.category = category  # trust our routing, not the model's labeling
     return result.findings
 
 
-def review_node(state: ReviewState) -> dict:
-    return {"findings": review_files(state["diff_files"])}
+def security_node(state: ReviewState) -> dict:
+    return {"findings": review_files(state["diff_files"], SECURITY_PROMPT, "security")}
+
+
+def bug_node(state: ReviewState) -> dict:
+    return {"findings": review_files(state["diff_files"], BUG_PROMPT, "bug")}
+
+
+def maintainability_node(state: ReviewState) -> dict:
+    return {"findings": review_files(state["diff_files"], MAINTAINABILITY_PROMPT, "maintainability")}
