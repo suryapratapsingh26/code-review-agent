@@ -2,8 +2,8 @@ from langchain_groq import ChatGroq
 
 from ..config import GROQ_API_KEY
 from ..diff import annotate_patch
-from ..models import Finding, ReviewResult
-from ..prompts import SECURITY_PROMPT, BUG_PROMPT, MAINTAINABILITY_PROMPT
+from ..models import Finding, ReviewResult, TriageResult
+from ..prompts import SECURITY_PROMPT, BUG_PROMPT, MAINTAINABILITY_PROMPT, TRIAGE_PROMPT
 from ..state import ReviewState
 
 MODEL = "openai/gpt-oss-120b"
@@ -45,3 +45,14 @@ def bug_node(state: ReviewState) -> dict:
 
 def maintainability_node(state: ReviewState) -> dict:
     return {"findings": review_files(state["diff_files"], MAINTAINABILITY_PROMPT, "maintainability")}
+
+
+
+def triage_node(state: ReviewState) -> dict:
+    diff_text = build_prompt(state["diff_files"])
+    if not diff_text:
+        return {"reviewers_to_run": []}
+    llm = ChatGroq(model=MODEL, api_key=GROQ_API_KEY, temperature=0)
+    triage = llm.with_structured_output(TriageResult)
+    result = triage.invoke([("system", TRIAGE_PROMPT), ("human", diff_text)])
+    return {"reviewers_to_run": result.reviewers_to_run}

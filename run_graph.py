@@ -10,6 +10,7 @@ graph = build_graph()
 result = graph.invoke({"repo": repo, "pr_number": pr_number, "findings": []})
 
 print(f"Fetched {len(result['diff_files'])} files")
+print(f"Reviewers run: {result['reviewers_to_run']}")
 print(f"Found {len(result['findings'])} findings")
 
 by_category = defaultdict(list)

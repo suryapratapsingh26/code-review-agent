@@ -16,3 +16,10 @@ class ReviewResult(BaseModel):
         default_factory=list,
         description="Problems found in the diff. Empty list if there are none.",
     )
+
+
+class TriageResult(BaseModel):
+    reviewers_to_run: list[Literal["security", "bug", "maintainability"]] = Field(
+        description="Which specialist reviewers are worth running on this diff. "
+        "Include a reviewer only if its focus area is plausibly relevant.",
+    )
