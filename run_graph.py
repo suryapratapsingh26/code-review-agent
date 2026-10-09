@@ -5,9 +5,10 @@ from src.reviewer.graph import build_graph
 
 repo = sys.argv[1]
 pr_number = int(sys.argv[2])
+publish = "--publish" in sys.argv
 
 graph = build_graph()
-result = graph.invoke({"repo": repo, "pr_number": pr_number, "findings": []})
+result = graph.invoke({"repo": repo, "pr_number": pr_number, "findings": [], "dry_run": not publish})
 
 print(f"Fetched {len(result['diff_files'])} files")
 print(f"Reviewers run: {result['reviewers_to_run']}")
