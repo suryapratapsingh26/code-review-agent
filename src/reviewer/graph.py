@@ -2,13 +2,12 @@ from langgraph.graph import END, START, StateGraph
 
 from .nodes.fetch import fetch_node
 from .nodes.reviewer import triage_node, security_node, bug_node, maintainability_node
+from .nodes.verifier import verifier_node
 from .state import ReviewState
-
 
 def route_to_reviewers(state: ReviewState) -> list[str]:
     chosen = state["reviewers_to_run"]
-    return chosen if chosen else [END]
-
+    return chosen if chosen else ["verifier"]
 
 def build_graph():
     graph = StateGraph(ReviewState)
@@ -26,8 +25,9 @@ def build_graph():
         route_to_reviewers,
         ["security", "bug", "maintainability", END],
     )
-    graph.add_edge("security", END)
-    graph.add_edge("bug", END)
-    graph.add_edge("maintainability", END)
-
+    graph.add_node("verifier", verifier_node)
+    graph.add_edge("security", "verifier")
+    graph.add_edge("bug", "verifier")
+    graph.add_edge("maintainability", "verifier")
+    graph.add_edge("verifier", END)
     return graph.compile()

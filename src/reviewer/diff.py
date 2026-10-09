@@ -24,3 +24,20 @@ def annotate_patch(patch: str) -> str:
         else:
             out.append(raw)  # e.g. "\ No newline at end of file"
     return "\n".join(out)
+
+
+
+def valid_lines(patch: str) -> set[int]:
+    """Return the set of line numbers that exist in the NEW version of the file."""
+    lines = set()
+    new_line = 0
+    for raw in patch.splitlines():
+        match = HUNK_RE.match(raw)
+        if match:
+            new_line = int(match.group(1))
+        elif raw.startswith("-"):
+            continue
+        elif raw.startswith(("+", " ")) or raw == "":
+            lines.add(new_line)
+            new_line += 1
+    return lines
