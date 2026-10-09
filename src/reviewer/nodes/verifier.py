@@ -1,6 +1,7 @@
 from ..diff import valid_lines
 from ..models import Finding
 from ..state import ReviewState
+from ..github import post_review
 
 SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2}
 
@@ -32,3 +33,8 @@ def verify_findings(findings: list[Finding], diff_files: list[dict]) -> list[Fin
 def verifier_node(state: ReviewState) -> dict:
     final = verify_findings(state["findings"], state["diff_files"])
     return {"final_findings": final}
+
+
+def publish_node(state: ReviewState) -> dict:
+    post_review(state["repo"], state["pr_number"], state["final_findings"], dry_run=state["dry_run"])
+    return {}
