@@ -11,10 +11,12 @@ result = graph.invoke({"repo": repo, "pr_number": pr_number, "findings": []})
 
 print(f"Fetched {len(result['diff_files'])} files")
 print(f"Reviewers run: {result['reviewers_to_run']}")
-print(f"Found {len(result['findings'])} findings")
+raw_count = len(result["findings"])
+final_count = len(result["final_findings"])
+print(f"Raw findings: {raw_count}, after verification: {final_count} (dropped {raw_count - final_count})")
 
 by_category = defaultdict(list)
-for f in result["findings"]:
+for f in result["final_findings"]:
     by_category[f.category].append(f)
 
 for category in ("security", "bug", "maintainability"):
