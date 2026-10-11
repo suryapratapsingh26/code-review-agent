@@ -1,3 +1,7 @@
+import time
+from groq import RateLimitError, BadRequestError
+
+
 from langchain_groq import ChatGroq
 
 from ..config import GROQ_API_KEY
@@ -5,6 +9,17 @@ from ..diff import annotate_patch
 from ..models import Finding, ReviewResult, TriageResult
 from ..prompts import SECURITY_PROMPT, BUG_PROMPT, MAINTAINABILITY_PROMPT, TRIAGE_PROMPT
 from ..state import ReviewState
+
+def _invoke_with_retry(structured_llm, messages, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            return structured_llm.invoke(messages)
+        except (RateLimitError, BadRequestError):
+            if attempt == max_retries - 1:
+                raise
+            wait = 20 * (attempt + 1)
+            print(f"  (rate limited, waiting {wait}s before retry...)")
+            time.sleep(wait)
 
 MODEL = "openai/gpt-oss-120b"
 MAX_DIFF_CHARS = 12000
@@ -29,7 +44,7 @@ def review_files(diff_files: list[dict], system_prompt: str, category: str) -> l
         return []
     llm = ChatGroq(model=MODEL, api_key=GROQ_API_KEY, temperature=0)
     reviewer = llm.with_structured_output(ReviewResult)
-    result = reviewer.invoke([("system", system_prompt), ("human", diff_text)])
+    result = _invoke_with_retry(reviewer, [("system", system_prompt), ("human", diff_text)])
     for f in result.findings:
         f.category = category  # trust our routing, not the model's labeling
     return result.findings
@@ -54,5 +69,5 @@ def triage_node(state: ReviewState) -> dict:
         return {"reviewers_to_run": []}
     llm = ChatGroq(model=MODEL, api_key=GROQ_API_KEY, temperature=0)
     triage = llm.with_structured_output(TriageResult)
-    result = triage.invoke([("system", TRIAGE_PROMPT), ("human", diff_text)])
+    result = _invoke_with_retry(triage, [("system", TRIAGE_PROMPT), ("human", diff_text)])
     return {"reviewers_to_run": result.reviewers_to_run}
